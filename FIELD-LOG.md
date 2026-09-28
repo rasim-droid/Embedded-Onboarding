@@ -30,3 +30,5 @@ If a session genuinely went perfectly, say so. But a log where nothing ever goes
 ---
 
 *(Delete the example once you have your own. Newest at the bottom.)*
+
+Checking if this works (first commit?)
