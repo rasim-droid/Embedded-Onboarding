@@ -59,6 +59,9 @@ static void MX_TIM15_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+uint8_t data[]="El luchador!\n";
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 }
@@ -102,12 +105,18 @@ HAL_TIM_Base_Start_IT(&htim15);
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
+ is for the message printing but prints twice for some reason*/
+
   while (1)
   {
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+
   }
   /* USER CODE END 3 */
 }
@@ -219,7 +228,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 38400;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
