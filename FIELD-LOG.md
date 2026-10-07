@@ -1,9 +1,9 @@
 ```
-████ TOP SECRET ████   FIELD LOG   ·   AGENT: ______________
+████ TOP SECRET ████   FIELD LOG   ·   AGENT: Rasim
 ```
 
-**Codename:** *(yours)*
-**Started:** *(date)*
+**Codename:** *El Luchador*
+**Started:** *Sep 25 2026*
 
 ---
 
@@ -19,16 +19,13 @@ If a session genuinely went perfectly, say so. But a log where nothing ever goes
 
 ---
 
-### 2026-XX-XX · 2 h · Phase 1
+### 2026-10-05 · 3 h · Phase 1
 
-**Trying to:** get a project building and something printing over serial.
+**Trying to:** Blink an LED on a nucleo board using code from a youtube tutorial, since stm32cubeide uses a new language. Then tried to connect the board and my mac using UART to print my code name on a chinese serial plotting app since I did not know there was a terminal command instead.
 
-**Happened:** builds clean, banner prints.
+**Happened:** Builds went well, so did debugging code, LED worked first try, and the board started talking after like an hour or two of coding and I got to print "El Luchador" for my mac
 
-**Didn't work:** nothing printed for forty minutes. Two COM ports showed up and I picked the wrong one. Then it printed garbage, which was the baud rate: the terminal was at 115200 but the .ioc was still on 9600 from a default I never looked at.
+
+**Didn't work:** At first the code failed and I was very lost so I looked through more sources just to realize I simply wrote "Hal" instead of "HAL", but then the build showed 0 errors afterwards. On the otherhand, UART was a bit more complex since it is not as popular of a project as blinking an LED, but after finding the right piece of code and navigating the ui on a serial plotting app the messages printed just fine
 
 ---
-
-*(Delete the example once you have your own. Newest at the bottom.)*
-
-Checking if this works (first commit?)
