@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,12 +48,6 @@ TIM_HandleTypeDef htim15;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-static const uint8_t SCD40_ADDRESS = 0x62 <<1; //for 7 bit address
-static const uint16_t SCD40_CMD_START_PERIODIC = 0x21B1;
-static const uint16_t SCD40_CMD_READ_MEASUREMENT = 0xEC05;
-static const uint16_t SCD40_CMD_STOP_PERIODIC = 0x3F86;
-static const uint16_t SCD40_CMD_DATA_READY = 0xE4B8;//This labels hex codes
-static const uint16_t SCD40_CMD_GET_SERIAL = 0x3682;
 
 
 /* USER CODE END PV */
@@ -64,7 +59,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM15_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-
+int __io_putchar(int ch);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -86,9 +81,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	HAL_StatusTypeDef ret;
-	uint8_t buf[12];
-	uint16_t raw_co2, raw_t;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -124,23 +116,19 @@ HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
 
   while (1)
   {
-	  ret = HAL_I2C_Master_Transmit(&hi2c1, SCD40_ADDRESS, buf, 2, HAL_MAX_DELAY);
-	  HAL_Delay(2);
-	  ret = HAL_I2C_Master_Recieve(&hi2c1, SCD40_ADDRESS, buf, 9, HAL_MAX_DELAY);
-	  if (ret == HAL_OK) {
-		  raw_co2 = (buf[0] << 8) | buf[1];
-		  raw_t = (buf[3] << 8) | buf[4];
 
-	  }
-
-
-	  strcpy((char*)buf, "Hello!\r\n");
-	  HAL_UART_Transmit(&huart2, buf, strlen((char*)buf), HAL_MAX_DELAY);
-	  HAL_Delay(500); /*should constantly print for I2C I think adress*/
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  for(uint8_t i = 0; i<127; i++)
+	  {
+		  if(HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, 10) == HAL_OK)
+		{
+			printf("I2C Address is 0x%x\n", i);
+		}
+	  }
+	  HAL_Delay(500);
 
 
   }
@@ -362,7 +350,11 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+int __io_putchar(int ch)
+{
+	HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+	return ch; /* I got no clue what this is but I think it defines i */
+}
 /* USER CODE END 4 */
 
 /**
