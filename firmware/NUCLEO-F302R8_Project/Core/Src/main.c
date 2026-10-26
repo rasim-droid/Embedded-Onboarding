@@ -65,6 +65,19 @@ int __io_putchar(int ch);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+static void i2c_scan(void)
+{
+	for(uint8_t i = 0; i<127; i++)
+    {
+	    if(HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, 10) == HAL_OK)
+		{
+			printf("I2C Address is 0x%x\r\n", i);
+		}
+    }
+}
+
+
+
 uint8_t data[]="El luchador!\n";
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
@@ -106,6 +119,8 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 HAL_TIM_Base_Start_IT(&htim15);
+
+i2c_scan();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -114,6 +129,11 @@ HAL_TIM_Base_Start_IT(&htim15);
 HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
  is for the message printing but prints twice for some reason*/
 
+  uint16_t DEV_add=0x1E;
+  uint8_t Mem_add=0x00;
+  uint8_t Read_data;
+
+  uint8_t Mem_data[2]={0x00,0x22};
   while (1)
   {
 
@@ -121,17 +141,29 @@ HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  for(uint8_t i = 0; i<127; i++)
+	  if(HAL_I2C_Master_Transmit(&hi2c1, DEV_add<<1, &Mem_add,1,100) ==HAL_OK)
 	  {
-		  if(HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, 10) == HAL_OK)
-		{
-			printf("I2C Address is 0x%x\n", i);
-		}
+	  	if(HAL_I2C_Master_Receive(&hi2c1, DEV_add<<1,&Read_data, 1, 100)==HAL_OK)
+	  		HAL_Delay(100);
 	  }
-	  HAL_Delay(500);
 
 
-  }
+	    }
+
+	  if(HAL_I2C_Master_Transmit(&hi2c1, DEV_add<<1, Mem_data, 2, 100)==HAL_OK)
+	  {
+		  HAL_Delay(100);
+	  }
+
+
+if(HAL_I2C_Master_Transmit(&hi2c1, DEV_add<<1, &Mem_add,1,100) ==HAL_OK)
+{
+	if(HAL_I2C_Master_Receive(&hi2c1, DEV_add<<1,&Read_data, 1, 100)==HAL_OK)
+		HAL_Delay(100);
+}
+
+
+
   /* USER CODE END 3 */
 }
 
