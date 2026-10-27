@@ -129,11 +129,19 @@ i2c_scan();
 HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
  is for the message printing but prints twice for some reason*/
 
-  uint16_t DEV_add=0x1E;
-  uint8_t Mem_add=0x00;
-  uint8_t Read_data;
+  uint8_t cmd_init[2] = {0x20, 0x03};//spg30_iaq_init
+  uint8_t cmd_meas[2] = {0x20, 0x08};//sgp30_measure_iaq
+  uint8_t buf[6];
+  uint16_t eco2, tvoc;
 
-  uint8_t Mem_data[2]={0x00,0x22};
+  /*Start air quality sensing*/
+  if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_init,2,100) != HAL_OK)
+  {
+	  printf("iaq_init failed\r\n");//shows if connection failed?
+  }
+  HAL_Delay(10);
+
+
   while (1)
   {
 
@@ -141,29 +149,29 @@ HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if(HAL_I2C_Master_Transmit(&hi2c1, DEV_add<<1, &Mem_add,1,100) ==HAL_OK)
+	  if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_meas,2,100) ==HAL_OK)
 	  {
-	  	if(HAL_I2C_Master_Receive(&hi2c1, DEV_add<<1,&Read_data, 1, 100)==HAL_OK)
-	  		HAL_Delay(100);
+		  HAL_Delay(12); //data sheet says 12 milli-seconds
+
+	  	if(HAL_I2C_Master_Receive(&hi2c1, 0x58<<1, buf, 6, 100)==HAL_OK)
+	  	{
+	  		eco2 = (buf[0] << 8) | buf[1]; // Buff [2] and [5] are crc so ignored
+	  		tvoc = (buf[3] << 8) | buf[4];
+	  		printf("eCO2: %u ppm, TVOC: %u ppb\r\n", eco2, tvoc);
+	  	}
+	  	else
+	  	{
+	  		printf("read failed\r\n");
+	  	}
+	  }
+	  else
+	  {
+		  printf("measure command failed\r\n");
 	  }
 
+	  HAL_Delay(988);
 
-	    }
-
-	  if(HAL_I2C_Master_Transmit(&hi2c1, DEV_add<<1, Mem_data, 2, 100)==HAL_OK)
-	  {
-		  HAL_Delay(100);
-	  }
-
-
-if(HAL_I2C_Master_Transmit(&hi2c1, DEV_add<<1, &Mem_add,1,100) ==HAL_OK)
-{
-	if(HAL_I2C_Master_Receive(&hi2c1, DEV_add<<1,&Read_data, 1, 100)==HAL_OK)
-		HAL_Delay(100);
-}
-
-
-
+  }
   /* USER CODE END 3 */
 }
 
