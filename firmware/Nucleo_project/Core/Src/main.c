@@ -41,6 +41,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim15;
@@ -49,21 +51,22 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_TIM15_Init(void);
+static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 int __io_putchar(int ch);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint16_t readValue;
 
 static void i2c_scan(void)
 {
@@ -94,6 +97,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -114,64 +118,70 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART2_UART_Init();
   MX_TIM15_Init();
+  MX_USART2_UART_Init();
   MX_I2C1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-HAL_TIM_Base_Start_IT(&htim15);
+  HAL_TIM_Base_Start_IT(&htim15);
 
-i2c_scan();
+  i2c_scan();
+
+  HAL_ADC_Start(&hadc1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
- is for the message printing but prints twice for some reason*/
+  HAL_UART_Transmit(&huart2, data, 12, 2000); /*1st comment umm this
+   is for the message printing but prints twice for some reason*/
 
-  uint8_t cmd_init[2] = {0x20, 0x03};//spg30_iaq_init
-  uint8_t cmd_meas[2] = {0x20, 0x08};//sgp30_measure_iaq
-  uint8_t buf[6];
-  uint16_t eco2, tvoc;
+    uint8_t cmd_init[2] = {0x20, 0x03};//spg30_iaq_init
+    uint8_t cmd_meas[2] = {0x20, 0x08};//sgp30_measure_iaq
+    uint8_t buf[6];
+    uint16_t eco2, tvoc;
 
-  /*Start air quality sensing*/
-  if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_init,2,100) != HAL_OK)
-  {
-	  printf("iaq_init failed\r\n");//shows if connection failed?
-  }
-  HAL_Delay(10);
+    /*Start air quality sensing*/
+    if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_init,2,100) != HAL_OK)
+    {
+  	  printf("iaq_init failed\r\n");//shows if connection failed?
+    }
+    HAL_Delay(10);
 
 
-  while (1)
-  {
+    while (1)
+    {
+
+    	HAL_ADC_PollForConversion(&hadc1,1000);
+    		readValue = HAL_ADC_GetValue(&hadc1);
 
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_meas,2,100) ==HAL_OK)
-	  {
-		  HAL_Delay(12); //data sheet says 12 milli-seconds
+  	  if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_meas,2,100) ==HAL_OK)
+  	  {
+  		  HAL_Delay(12); //data sheet says 12 milli-seconds
 
-	  	if(HAL_I2C_Master_Receive(&hi2c1, 0x58<<1, buf, 6, 100)==HAL_OK)
-	  	{
-	  		eco2 = (buf[0] << 8) | buf[1]; // Buff [2] and [5] are crc so ignored
-	  		tvoc = (buf[3] << 8) | buf[4];
-	  		printf("eCO2: %u ppm, TVOC: %u ppb\r\n", eco2, tvoc);
-	  	}
-	  	else
-	  	{
-	  		printf("read failed\r\n");
-	  	}
-	  }
-	  else
-	  {
-		  printf("measure command failed\r\n");
-	  }
+  	  	if(HAL_I2C_Master_Receive(&hi2c1, 0x58<<1, buf, 6, 100)==HAL_OK)
+  	  	{
+  	  		eco2 = (buf[0] << 8) | buf[1]; // Buff [2] and [5] are crc so ignored
+  	  		tvoc = (buf[3] << 8) | buf[4];
+  	  		printf("eCO2: %u ppm, TVOC: %u ppb\r\n", eco2, tvoc);
+  	  	}
+  	  	else
+  	  	{
+  	  		printf("read failed\r\n");
+  	  	}
+  	  }
+  	  else
+  	  {
+  		  printf("measure command failed\r\n");
+  	  }
 
-	  HAL_Delay(988);
+  	  HAL_Delay(988);
 
-  }
+    }
   /* USER CODE END 3 */
 }
 
@@ -212,13 +222,73 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM15;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM15
+                              |RCC_PERIPHCLK_ADC1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.Tim15ClockSelection = RCC_TIM15CLK_HCLK;
+  PeriphClkInit.Adc1ClockSelection = RCC_ADC1PLLCLK_DIV1;
+
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -288,9 +358,9 @@ static void MX_TIM15_Init(void)
 
   /* USER CODE END TIM15_Init 1 */
   htim15.Instance = TIM15;
-  htim15.Init.Prescaler = 9999;
+  htim15.Init.Prescaler = 10000-1;
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 3199;
+  htim15.Init.Period = 3200-1;
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
