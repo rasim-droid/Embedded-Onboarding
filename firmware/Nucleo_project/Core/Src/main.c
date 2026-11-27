@@ -45,6 +45,7 @@ ADC_HandleTypeDef hadc1;
 
 I2C_HandleTypeDef hi2c1;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim15;
 
 UART_HandleTypeDef huart2;
@@ -60,12 +61,24 @@ static void MX_TIM15_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 int __io_putchar(int ch);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+//Code for Servo angle setting
+void Set_Servo_Angle (TIM_HandleTypeDef *htim,uint32_t channel, uint8_t angle){
+	//Angle(0-180) to pulse width (500-2500 counts)
+	//500 for 0.5ms (0 degrees) and 2500 for 2.5ms (180 degrees)
+	uint32_t pulse_length = 500 + (angle *(2500-500)/180);
+	__HAL_TIM_SET_COMPARE(htim, channel, pulse_length);
+}
+
+
+
+
 uint16_t readValue;
 
 static void i2c_scan(void)
@@ -122,7 +135,13 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_ADC1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+
+  //Servo code
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+
+
   HAL_TIM_Base_Start_IT(&htim15);
 
   i2c_scan();
@@ -151,14 +170,25 @@ int main(void)
 
     while (1)
     {
-
     	HAL_ADC_PollForConversion(&hadc1,1000);
-    		readValue = HAL_ADC_GetValue(&hadc1);
+    	readValue = HAL_ADC_GetValue(&hadc1);
 
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+      //Sweaping servo motor 180 degrees
+      for (uint8_t angle =0; angle<= 180; angle += 10){//try to get rid of this line and the delay and set angel to something specific
+      Set_Servo_Angle(&htim2, TIM_CHANNEL_1, angle);
+      HAL_Delay(100);
+      }
+
+      //Sweep servo from 180 degrees to 0
+      	  for (uint8_t angle = 180; angle > 0; angle -= 10){
+      		  Set_Servo_Angle(&htim2, TIM_CHANNEL_1, angle);
+      		  HAL_Delay(100);
+           	   }
+
   	  if(HAL_I2C_Master_Transmit(&hi2c1, 0x58<<1, cmd_meas,2,100) ==HAL_OK)
   	  {
   		  HAL_Delay(12); //data sheet says 12 milli-seconds
@@ -336,6 +366,65 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 64-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 20000-1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 
